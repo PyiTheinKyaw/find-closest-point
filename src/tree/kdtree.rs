@@ -3,173 +3,136 @@ use std::fmt::Debug;
 use std::rc::Rc;
 use crate::points::point::{Point, Point3D};
 use crate::tree::error_handler::ComparisonError;
-use super::Ikd::{IIterator, IKDTree, NodeDirection};
+use super::Ikd::{IKDTree, NodeDirection};
 
 #[derive(Debug)]
-pub struct KDTree<P>
+pub struct KDTree<'kdp, P>
 {
-    pub point: Option<Rc<P>>,
+    pub point: &'kdp P,
     depth: usize,
-    pub left: Option<Rc<KDTree<P>>>,
-    pub right: Option<Rc<KDTree<P>>>,
+    pub left: Option<&'kdp KDTree<'kdp, P>>,
+    pub right: Option<&'kdp KDTree<'kdp, P>>,
 }
+
+
 
 /**
 Implementation of KDTree
 **/
-impl<P> IKDTree<P> for KDTree<P>
+impl<'kdp, P> IKDTree<'kdp, P> for KDTree<'kdp, P>
     where P: Point<Point3D> + Copy + PartialEq + Debug
 {
-    type Output = KDTree<P>;
+    type Output = KDTree<'kdp, P>;
 
-    fn create_kd_tree(points: &mut Vec<P>, depth: usize, k: usize) -> Result<Rc<KDTree<P>>, String> {
+    fn new (point: &P, depth: usize) -> Self::Output {
+        KDTree { point, depth, left: None, right: None }
+    }
+
+    fn set_child_node(&mut self, nodes: &Self::Output, direction: &NodeDirection) {
+        match direction {
+            NodeDirection::LEFT => self.left = Some(nodes),
+            NodeDirection::RIGHT => self.right = Some(nodes),
+            _ => ()
+        }
+    }
+
+    fn create_kd_tree(points: &'kdp mut [&'kdp P], depth: usize, k: usize) -> Result<&'kdp KDTree<P>, String> {
         if points.len() == 0 {
             return Err(String::from("KDTreeBuildError: point len is zero."));
         }
 
-        // In order to get almost perfect balance tree, we have to sort it first.
-        points.sort_by(|a, b| Self::sorting_point(a, b, 0).unwrap());
-
         // Following code will init an KDTree object with zero value.
-        if let Some(kd_tree) = Self::build_kd_tree(
-            Self::init(),
+        let kd_tree = Self::build_kd_tree(
             points,
-            3,
-            0
-        ){
-            return Ok(kd_tree)
-        }else {
-            Err(String::from("KDTreeBuildError: Error occurs while building KDTree"))
-        }
+            k,
+            depth
+        );
+
+        Ok(&*kd_tree)
     }
 
     fn build_kd_tree
     (
-        mut init_kd_tree: Self::Output,
-        sorted_points: &mut Vec<P>,
+        sorted_points: &mut [&'kdp P],
         k: usize,
         depth: usize
-    ) -> Option<Rc<Self::Output>>
+    ) -> Box<Self::Output>
     {
         let axis = depth % k;
 
         // In order to get almost perfect balance tree, we have to sort it first.
-        sorted_points.sort_by(|a, b| Self::sorting_point(a, b, axis).unwrap());
+        Self::multi_dimensional_sort(sorted_points, axis);
 
         // find the median
         let median = sorted_points.len() / 2;
 
-        // Update current node.
-        init_kd_tree.point = Some(Rc::new(sorted_points[median]));
-        init_kd_tree.depth = depth;
+        // Create for current node position.
+
+        let mut current_node = Self::new(
+            &sorted_points[median],
+            depth
+        );
 
         // Median 0 means there is no points left to operate.
+        // If it's not 0, it's still point left turn into node.
         if median != 0 {
+            let mut direction = NodeDirection::NOWHERE;
 
-            // Only left node to create
+            // Calculate the direction
+            // If Median is 1 and len is 2.
             if median == 1 && sorted_points.len() == 2 {
-                // Create Left nodes
-                let left_point = Self::operation_point_list(
+                // Only left node to create
+                // Best case
+                let mut point_slice = Self::operation_point_list(
                     &sorted_points,
                     median,
-                    NodeDirection::LEFT
+                    &NodeDirection::LEFT
                 );
 
-                match Self::build_kd_tree(
-                    Self::init(),
-                    &mut left_point.to_vec(),
-                    3,
-                    depth + 1
-                )
-                {
-                    Some(left_child_node) => {
-                        init_kd_tree.left = Some(Rc::clone(&left_child_node));
-                    },
+                let child_node = Self::build_kd_tree(&mut point_slice, k,depth + 1);
+                current_node.set_child_node(&*child_node, &NodeDirection::LEFT);
+            }
+            else {
+                // Else, we have to create both childs - left and right.
+                // Average case
+                for index in 0..2 {
 
-                    _ => ()
-                }
-            } else {
-                // Create Left nodes
-                let left_point = Self::operation_point_list(
-                    &sorted_points,
-                    median,
-                    NodeDirection::LEFT
-                );
+                    if NodeDirection::LEFT as u8 == index {
+                        direction = NodeDirection::LEFT;
+                    }
+                    if NodeDirection::RIGHT as u8 == index {
+                        direction = NodeDirection::RIGHT;
+                    }
 
-                match Self::build_kd_tree(
-                    Self::init(),
-                    &mut left_point.to_vec(),
-                    3,
-                    depth + 1
-                )
-                {
-                    Some(left_child_node) => {
-                        init_kd_tree.left = Some(Rc::clone(&left_child_node));
-                    },
+                    // Prepare data
+                    let mut point_slice = Self::operation_point_list(
+                        &sorted_points,
+                        median,
+                        &direction
+                    );
 
-                    _ => ()
-                }
-
-                // Create Right nodes
-                let right_point = Self::operation_point_list(
-                    &sorted_points,
-                    median,
-                    NodeDirection::RIGHT
-                );
-
-                match Self::build_kd_tree(
-                    Self::init(),
-                    &mut right_point.to_vec(),
-                    3,
-                    depth + 1
-                )
-                {
-                    Some(right_child_node) => {
-                        init_kd_tree.right = Some(Rc::clone(&right_child_node));
-                    },
-
-                    _ => ()
+                    // Create Child node according to direction.
+                    let child_node = Self::build_kd_tree(&mut point_slice, k,depth + 1);
+                    current_node.set_child_node(&*child_node, &direction);
                 }
             }
         }
-                Some(Rc::new(init_kd_tree))
 
+        // Return current node;
+        Box::new(current_node)
     }
 
-    fn init() -> Self::Output {
-        KDTree {
-            point: None,
-            depth: 0,
-            left: None,
-            right: None,
-        }
-    }
-
-    fn sorting_point(
-        point_a: &P,
-        point_b: &P,
-        axis: usize
-    ) -> Result<Ordering, ComparisonError>
+    fn multi_dimensional_sort(list: &mut [&P], axis: usize)
     {
-        let point_a_cord = point_a.get_coordinate();
-        let point_b_cord = point_b.get_coordinate();
+        list.sort_by(|a, b| {
 
-        match axis {
-            // Compare x dimension
-            0 => Ok(point_a_cord[0].partial_cmp(&point_b_cord[0]).unwrap()),
+            let a_coord = a.get_coordinate();
+            let b_coord = b.get_coordinate();
 
-            // Compare y dimension
-            1 => Ok(point_a_cord[1].partial_cmp(&point_b_cord[1]).unwrap()),
-
-            // Compare z dimension
-            2 => Ok(point_a_cord[2].partial_cmp(&point_b_cord[2]).unwrap()),
-
-            _ => Err(
-                ComparisonError::InvalidOrdering(
-                    "KDTreeBuildError: Sorting undone.".to_string()
-                )
-            )
-        }
+            if axis == 0 {a_coord[0].partial_cmp(&b_coord[0]).unwrap()}
+            else if axis == 1 {a_coord[1].partial_cmp(&b_coord[1]).unwrap()}
+            else {a_coord[2].partial_cmp(&b_coord[2]).unwrap()}
+        });
     }
 
     fn sorting_nearest(
@@ -179,19 +142,21 @@ impl<P> IKDTree<P> for KDTree<P>
         Ok(n_point_a.0.partial_cmp(&n_point_b.0).unwrap())
     }
 
-    fn operation_point_list(
-        points: &Vec<P>,
+    fn operation_point_list
+    (
+        points: &'kdp [&'kdp P],
         median: usize,
-        node_direction: NodeDirection
-    ) -> &[P]
+        direction: &'kdp NodeDirection
+    ) -> &'kdp [&'kdp P]
     {
-        match node_direction {
+        match direction {
             NodeDirection::LEFT => {
                 &points[..median]
             }
             NodeDirection::RIGHT => {
                 &points[median+1..]
-            }
+            },
+            _ => &[]
         }
     }
 
@@ -229,10 +194,10 @@ impl<P> IKDTree<P> for KDTree<P>
     ) -> Vec<(f32, &'p P)>
     {
         let axis = node.depth % k;
-        let point = node.point.as_ref().unwrap().as_ref();
+        let point = node.point;
 
-        let left_node = node.left.as_ref();
-        let right_node = node.right.as_ref();
+        let left_node = node.left;
+        let right_node = node.right;
 
         // Calculate the distance between current node and query point.
         let mut current_node_distance = query_point.distance_to(point);
@@ -261,7 +226,7 @@ impl<P> IKDTree<P> for KDTree<P>
                      * We may need to check the other side of the tree. If the other side is closer than the radius
                      */
                     if !left_node.is_none() {
-                        distance_to_op_side = query_point.distance_to(left_node.unwrap().point.as_ref().unwrap().as_ref());
+                        distance_to_op_side = query_point.distance_to(left_node.unwrap().point);
                         if distance_to_op_side < max_distance_sq { direction = NodeDirection::LEFT };
                     }
                 }
@@ -269,7 +234,7 @@ impl<P> IKDTree<P> for KDTree<P>
                 else if direction == NodeDirection::LEFT {
                     best_points = Self::nearest_neighbour(left_node.unwrap(), max_distance_sq, query_point, best_points, k);
                     if !right_node.is_none() {
-                        distance_to_op_side = query_point.distance_to(right_node.unwrap().point.as_ref().unwrap().as_ref());
+                        distance_to_op_side = query_point.distance_to(right_node.unwrap().point);
                         if distance_to_op_side < max_distance_sq { direction = NodeDirection::RIGHT };
                     }
                 }
@@ -311,39 +276,17 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_compare_points() {
-        let point_a = Point3D::new(1.0, 2.0, 3.0);
-        let point_b = Point3D::new(2.0, 2.0, 3.0);
-        let point_c = Point3D::new(1.0, 3.0, 3.0);
-
-        assert_eq!(KDTree::sorting_point(&point_b, &point_a, 0).is_ok(), true);
-        assert_eq!(KDTree::sorting_point(&point_b, &point_a, 0).unwrap(), Ordering::Greater);
-
-        assert_eq!(KDTree::sorting_point(&point_a, &point_b, 1).is_ok(), true);
-        assert_eq!(KDTree::sorting_point(&point_a, &point_b, 1).unwrap(), Ordering::Equal);
-
-        assert_eq!(KDTree::sorting_point(&point_a, &point_c, 1).is_ok(), true);
-        assert_eq!(KDTree::sorting_point(&point_a, &point_c, 1).unwrap(), Ordering::Less);
-
-        assert_eq!(KDTree::sorting_point(&point_c, &point_a, 1).is_ok(), true);
-        assert_eq!(KDTree::sorting_point(&point_c, &point_a, 1).unwrap(), Ordering::Greater);
-;
-        assert_eq!(KDTree::sorting_point(&point_a, &point_b, 2).is_ok(), true);
-        assert_eq!(KDTree::sorting_point(&point_a, &point_b, 2).unwrap(), Ordering::Equal);
-    }
-
-    #[test]
     fn test_operation_point_list() {
-        let mut points = vec![
-            Point3D::new(1.0, 2.0, 3.0),
-            Point3D::new(4.0, 5.0, 6.0),
-            Point3D::new(7.0, 8.0, 9.0),
+        let mut points = [
+            &Point3D::new(1.0, 2.0, 3.0),
+            &Point3D::new(4.0, 5.0, 6.0),
+            &Point3D::new(7.0, 8.0, 9.0),
         ];
 
         let median = points.len() / 2;
 
-        let left_points = KDTree::operation_point_list(&points, median, NodeDirection::LEFT);
-        let right_points = KDTree::operation_point_list(&points, median, NodeDirection::RIGHT);
+        let left_points = KDTree::operation_point_list(&points, median, &NodeDirection::LEFT);
+        let right_points = KDTree::operation_point_list(&points, median, &NodeDirection::RIGHT);
 
         assert_eq!(left_points, &points[..median]);
         assert_eq!(right_points, &points[median+1..]);
