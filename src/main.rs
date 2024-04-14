@@ -11,7 +11,7 @@ fn bench_find_closest(c: &mut Criterion) {
     println!("[+] 10M Point generated");
 
     println!("[+] Creating and Inserting into KDTree Data structure............");
-    let root = KDTree::create_kd_tree(&mut points, 0, 3).unwrap();
+    let root = KDTree::create_kd_tree(&mut [Point3D::new(10.0,2.0,3.0)], 0, 3).unwrap();
     println!("[+] KDTree Created");
 
     let query_point = Point3D::random_point();

@@ -1,3 +1,4 @@
+use std::cell::{Ref, RefCell, RefMut};
 use std::cmp::Ordering;
 use std::rc::Rc;
 use crate::KDTree;
@@ -25,17 +26,17 @@ return type of the methods must be declared as the iterator
 interface so that the concrete collections can return various
 kinds of iterators.
 */
-pub trait IKDTree<'kdp, P>
+pub trait IKDTree<P>
 {
     type Output;
 
     fn new
     (
-        point: &P,
+        point: P,
         depth: usize,
     ) -> Self::Output;
 
-    fn set_child_node(&mut self, nodes: &Self::Output, direction: &NodeDirection);
+    fn set_child_node(&mut self, node: Self::Output, direction: &NodeDirection);
 
     /**
      @param
@@ -43,21 +44,23 @@ pub trait IKDTree<'kdp, P>
         depth: is used to calculate the axis which is used to compare dimension .
         k: is the dimension .
      **/
-    fn create_kd_tree(
-        points: &'kdp mut [&'kdp P],
+    fn create_kd_tree
+    (
+        points: &mut RefCell<&[P]>,
         depth: usize,
         k: usize
-    ) -> Result<&'kdp Self::Output, String>;
+    ) -> Result<Box<Self::Output>, String>;
 
+    // This is the helper function to do create_kd_tree.
     fn build_kd_tree
     (
-        points: &mut [&'kdp P],
+        points: &mut RefCell<&[P]>,
         k: usize,
         depth: usize,
-    ) -> Box<Self::Output>;
+    ) -> Self::Output;
 
     // .........
-    fn multi_dimensional_sort(list: &mut [&P], axis: usize);
+    fn multi_dimensional_sort<'a>(list: &'a mut RefCell<&'a [P]>, axis: usize) -> &'a mut RefCell<&'a [P]>;
 
     fn sorting_nearest(
         n_point_a: &(f32, &P),
@@ -65,16 +68,12 @@ pub trait IKDTree<'kdp, P>
     ) -> Result<Ordering, ComparisonError>;
 
     fn operation_point_list
+    <'kdp>
     (
-        points: &'kdp [&'kdp P],
+        points: Ref<&'kdp [P]>,
         median: usize,
-        direction: &'kdp NodeDirection
-    ) -> &'kdp [&'kdp P];
-    // (
-    //     points: &'kdp [&'kdp P],
-    //     median: usize,
-    //     direction: &'kdp NodeDirection
-    // ) -> &'kdp [&'kdp P];
+        direction: &NodeDirection
+    ) -> RefCell<&'kdp [P]>;
 
     fn find_closest(
         &self,
