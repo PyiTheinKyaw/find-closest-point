@@ -1,21 +1,11 @@
 pub trait Point<T> {
 
-    fn generate_points(amount: usize) -> Vec<T>;
+    fn generate_points(amount: usize, min: f32, max: f32) -> Vec<T>;
     fn distance_to(&self, other: &Self) -> f32;
-    fn random_point() -> T;
+    fn random_point(min: f32, max: f32) -> T;
 
     fn get_coordinate(&self) -> Vec<&f32>;
 }
-
-// trait Clamp {
-//     fn clamp(self, min: f64, max: f64) -> f64;
-// }
-//
-// impl Clamp for f64 {
-//     fn clamp(self, min: f64, max: f64) -> f64 {
-//         [[self, min].max(), max].min()
-//     }
-// }
 
 #[derive(Debug, Copy, Clone)]
 pub struct Point3D {
@@ -37,10 +27,10 @@ impl Point<Point3D> for Point3D
     /*
     This method is used to generate points depends on amount parameter.
     */
-    fn generate_points(amount: usize) -> Vec<Point3D> {
+    fn generate_points(amount: usize, min: f32, max: f32) -> Vec<Point3D> {
         let mut points = Vec::with_capacity(amount);
         for _ in 0..amount {
-            points.push(Point3D::random_point());
+            points.push(Point3D::random_point(min, max));
         }
         points
     }
@@ -58,8 +48,12 @@ impl Point<Point3D> for Point3D
     }
 
     /* This method is used to generate random one points. */
-    fn random_point() -> Self {
-        Point3D::new(rand::random(), rand::random(), rand::random())
+    fn random_point(min: f32, max: f32) -> Self {
+        Point3D::new(
+            ((rand::random::<f32>() * (max - min) + min)* 100.0).round() / 100.0,
+            ((rand::random::<f32>() * (max - min) + min)* 100.0).round() / 100.0,
+            ((rand::random::<f32>() * (max - min) + min)* 100.0).round() / 100.0,
+        )
     }
 
     fn get_coordinate(&self) -> Vec<&f32> {
