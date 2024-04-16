@@ -50,6 +50,8 @@ impl<P> IKDTree<P> for KDTree<P>
             depth
         );
 
+        
+
         Ok(Box::new(kd_tree))
     }
 
