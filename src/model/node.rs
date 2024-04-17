@@ -1,5 +1,4 @@
 use std::fmt::Debug;
-use crate::functions::distance_calculator::DistanceCalculator;
 use crate::model::direction::NodeDirection;
 #[derive(Debug)]
 pub struct Node<T> {
@@ -10,7 +9,6 @@ pub struct Node<T> {
 }
 
 impl<T> Node<T>
-where T: DistanceCalculator + PartialEq + Debug
 {
     pub fn get_empty_node(value: T,  depth: usize) -> Node<T> {
         Node {

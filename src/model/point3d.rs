@@ -1,5 +1,7 @@
 use std::cmp::Ordering;
+use crate::functions::dataset::Dataset;
 use crate::functions::distance_calculator::DistanceCalculator;
+use crate::functions::sortable::Sortable;
 
 #[derive(Debug)]
 pub struct Point3D {
@@ -12,45 +14,24 @@ impl Point3D {
     fn new(x: f32, y: f32, z: f32) -> Self {
         Point3D {x,y,z}
     }
+}
 
-    /*
-    This method is used to generate points depends on amount parameter.
-    */
-    fn generate_points(amount: usize, min: f32, max: f32) -> Vec<Point3D> {
+impl Dataset<Point3D> for Point3D
+{
+    fn generate_data_list(amount: usize, min: f32, max: f32) -> Vec<Point3D> {
         let mut points = Vec::with_capacity(amount);
         for _ in 0..amount {
-            points.push(Point3D::random_point(min, max));
+            points.push(Point3D::random_data(min, max));
         }
         points
     }
 
-    /* This method is used to generate random one points. */
-    fn random_point(min: f32, max: f32) -> Self {
+    fn random_data(min: f32, max: f32) -> Point3D {
         Point3D::new(
             ((rand::random::<f32>() * (max - min) + min)* 100.0).round() / 100.0,
             ((rand::random::<f32>() * (max - min) + min)* 100.0).round() / 100.0,
             ((rand::random::<f32>() * (max - min) + min)* 100.0).round() / 100.0,
         )
-    }
-
-    fn get_coordinate(&self) -> Vec<&f32> {
-        vec![&self.x, &self.y, &self.z]
-    }
-
-    fn sorting_point(
-        &self,
-        other: &Point3D,
-        axis: usize
-    ) -> Ordering {
-
-        // Compare x dimension
-        if axis == 0 { self.x.partial_cmp(&other.x).unwrap() }
-
-        // Compare y dimension
-        else if axis == 1 { self.y.partial_cmp(&other.y).unwrap() }
-
-        // Compare z dimension
-        else { self.z.partial_cmp(&other.z).unwrap() }
     }
 }
 
@@ -67,5 +48,24 @@ impl DistanceCalculator for Point3D {
         let dz = self.z - other.z;
 
         (dx * dx + dy * dy + dz * dz).sqrt()
+    }
+}
+
+impl Sortable<Point3D> for Point3D
+{
+    fn sort_with_axis(
+        &self,
+        other: &Point3D,
+        axis: usize
+    ) -> Ordering {
+
+        // Compare x dimension
+        if axis == 0 { self.x.partial_cmp(&other.x).unwrap() }
+
+        // Compare y dimension
+        else if axis == 1 { self.y.partial_cmp(&other.y).unwrap() }
+
+        // Compare z dimension
+        else { self.z.partial_cmp(&other.z).unwrap() }
     }
 }
