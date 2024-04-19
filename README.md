@@ -74,3 +74,6 @@ Currently, the point search functionality exhibits limitations in finding very d
 - I have plans to further optimize the point generation and KDTree building methods.
 - I implemented the Strategy design pattern to allow for future code modifications and support data structures beyond 3D points (e.g., 2D, 4D).
 - I minimized code reuse to enhance code clarity and maintainability.
+
+# Progress
+V0.2.0 is under development
