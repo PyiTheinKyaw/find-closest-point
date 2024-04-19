@@ -51,23 +51,6 @@ function construct_kd_tree(points, depth):
 
     return node
 
-function calculate_sah_cost(points, dimension, split_value):
-    left_subset = points with coordinates < split_value along dimension
-    right_subset = points with coordinates >= split_value along dimension
-
-    // Calculate bounding boxes for left and right subsets
-    left_box = calculate_bounding_box(left_subset)
-    right_box = calculate_bounding_box(right_subset)
-
-    // Compute surface areas of bounding boxes
-    surface_area_left = calculate_surface_area(left_box)
-    surface_area_right = calculate_surface_area(right_box)
-
-    // Calculate SAH cost
-    sah_cost = (number of points in left_subset * surface_area_left)
-             + (number of points in right_subset * surface_area_right)
-    return sah_cost
-
 function select_optimal_splitting_plane(points, dimensions):
     min_cost = INFINITY
     optimal_dimension = 0
@@ -90,6 +73,23 @@ function select_optimal_splitting_plane(points, dimensions):
                 optimal_split_value = split_value
 
     return (optimal_dimension, optimal_split_value)
+
+function calculate_sah_cost(points, dimension, split_value):
+    left_subset = points with coordinates < split_value along dimension
+    right_subset = points with coordinates >= split_value along dimension
+
+    // Calculate bounding boxes for left and right subsets
+    left_box = calculate_bounding_box(left_subset)
+    right_box = calculate_bounding_box(right_subset)
+
+    // Compute surface areas of bounding boxes
+    surface_area_left = calculate_surface_area(left_box)
+    surface_area_right = calculate_surface_area(right_box)
+
+    // Calculate SAH cost
+    sah_cost = (number of points in left_subset * surface_area_left)
+             + (number of points in right_subset * surface_area_right)
+    return sah_cost
 
 function calculate_surface_area(min_coordinates, max_coordinates):
     // Calculate the dimensions of the bounding box

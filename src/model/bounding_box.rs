@@ -9,6 +9,7 @@ pub struct BoundingBox {
 }
 
 impl BoundingBox {
+
     /// Calculates the bounding box for a list of points.
     ///
     /// This function calculates the bounding box for a list of points of type `T`.
@@ -47,6 +48,8 @@ impl BoundingBox {
     /// The minimum coordinates are initialized with the maximum possible value of `f32`, and the maximum coordinates
     /// are initialized with the minimum possible value of `f32`, ensuring that any point will update the bounding box.
     /// If the list of points is empty, the resulting bounding box will have invalid coordinates.
+    ///
+    /// @author: Pyi Thein Kyaw
     pub fn calculate_bounding_box<T>(list: &Vec<T>, k: usize) -> Self
     where T: Dataset<T>
     {
@@ -79,6 +82,23 @@ impl BoundingBox {
         }
 
         BoundingBox {k, min_coordinates, max_coordinates}
+    }
+
+    fn calculate_surface_area(&self, k: usize) -> f32 {
+
+        let mut axis_list = Vec::new();
+        let mut surface_area: f32;
+
+        for index in 0..k {
+            axis_list.push(&self.max_coordinates[index] - &self.min_coordinates[index]);
+        }
+
+        let mut axis_iter = axis_list.iter();
+
+        let value = axis_iter.next();
+
+        todo!()
+
     }
 }
 
