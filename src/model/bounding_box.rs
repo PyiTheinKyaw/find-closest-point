@@ -16,8 +16,8 @@ impl BoundingBox {
     ///
     /// # Arguments
     ///
-    /// * `k` - The dimension of the points (number of coordinates).
     /// * `list` - A reference to a vector containing the points.
+    /// * `k` - The dimension of the points (number of coordinates).
     ///
     /// # Type Parameters
     ///
@@ -48,7 +48,7 @@ impl BoundingBox {
     /// The minimum coordinates are initialized with the maximum possible value of `f32`, and the maximum coordinates
     /// are initialized with the minimum possible value of `f32`, ensuring that any point will update the bounding box.
     /// If the list of points is empty, the resulting bounding box will have invalid coordinates.
-    pub fn calculate_bounding_box<T>(k: usize, list: &Vec<T>) -> Self
+    pub fn calculate_bounding_box<T>(list: &Vec<T>, k: usize) -> Self
     where T: Dataset<T>
     {
         let mut min_coordinates: Vec<f32> = Vec::new();
@@ -62,8 +62,8 @@ impl BoundingBox {
 
                 let point_coord = point.get_internal_state()[index];
 
-                min_coordinates.push(point_coord.min(f32::MAX));
-                max_coordinates.push(point_coord.max(f32::MIN));
+                min_coordinates.insert(index, point_coord.min(f32::MAX));
+                max_coordinates.insert(index, point_coord.max(f32::MIN));
             }
         }
 
