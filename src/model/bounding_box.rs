@@ -32,10 +32,9 @@ impl BoundingBox {
     /// ```
     /// use fnp::model::point3d::Point3D;
     /// use fnp::model::bounding_box::BoundingBox;
-    /// use super::*;
     ///
     /// let points = vec![Point3D::new(1.0, 2.0, 3.0), Point3D::new(4.0, 5.0, 6.0)];
-    /// let bounding_box = BoundingBox::calculate_bounding_box(3, &points);
+    /// let bounding_box = BoundingBox::calculate_bounding_box(&points, 3);
     /// ```
     ///
     /// # Panics
@@ -51,8 +50,20 @@ impl BoundingBox {
     pub fn calculate_bounding_box<T>(list: &Vec<T>, k: usize) -> Self
     where T: Dataset<T>
     {
-        let mut min_coordinates: Vec<f32> = Vec::new();
-        let mut max_coordinates: Vec<f32> = Vec::new();
+        let mut min_coordinates: Vec<f32> = Vec::with_capacity(k);
+        let mut max_coordinates: Vec<f32> = Vec::with_capacity(k);
+
+        // allocate on the memory according to dimension-axis value.
+        unsafe {
+            min_coordinates.set_len(k);
+            max_coordinates.set_len(k);
+        }
+
+        // Init value to assert the max-min coord.
+        for index in 0..k {
+            min_coordinates[index] = f32::MAX;
+            max_coordinates[index] = f32::MIN;
+        }
 
         // Iterate over each point to update minimum and maximum coordinates
         for point in list.iter() {
@@ -62,8 +73,8 @@ impl BoundingBox {
 
                 let point_coord = point.get_internal_state()[index];
 
-                min_coordinates.insert(index, point_coord.min(f32::MAX));
-                max_coordinates.insert(index, point_coord.max(f32::MIN));
+                if min_coordinates[index] > point_coord { min_coordinates[index] = point_coord;}
+                if max_coordinates[index] < point_coord { max_coordinates[index] = point_coord;}
             }
         }
 
@@ -85,7 +96,7 @@ mod tests {
         ];
 
         // Call the function to calculate the bounding box
-        let bounding_box = BoundingBox::calculate_bounding_box(3, &points);
+        let bounding_box = BoundingBox::calculate_bounding_box(&points, 3);
 
         // Assert that the minimum and maximum coordinates are correct
         assert_eq!(bounding_box.min_coordinates, vec![1.0, 2.0, 3.0]);
