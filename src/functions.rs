@@ -4,5 +4,3 @@ mod explorer;
 pub mod sortable;
 pub mod tree_constructor;
 pub mod dataset;
-mod RAS;
-mod SAH;

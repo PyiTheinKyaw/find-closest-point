@@ -1,0 +1,107 @@
+function partition_dataset(points, dimension, split_value):
+    left_subset = empty list
+    right_subset = empty list
+
+    // Iterate over each point in the dataset
+    for point in points:
+        // Check the coordinate value along the specified dimension
+        if point.coordinate(dimension) < split_value:
+            // Point belongs to the left subset
+            append point to left_subset
+        else:
+            // Point belongs to the right subset
+            append point to right_subset
+
+    return left_subset, right_subset
+
+
+function calculate_bounding_box(points):
+    // Initialize minimum and maximum coordinates for each dimension
+    min_coordinates = [INFINITY, INFINITY, INFINITY]
+    max_coordinates = [-INFINITY, -INFINITY, -INFINITY]
+
+    // Iterate over each point to update minimum and maximum coordinates
+    for point in points:
+        for dim in 0 to 2: // Assuming 3D space
+            min_coordinates[dim] = min(min_coordinates[dim], point.coordinate(dim))
+            max_coordinates[dim] = max(max_coordinates[dim], point.coordinate(dim))
+
+    // Construct bounding box using minimum and maximum coordinates
+    bounding_box = (min_coordinates, max_coordinates)
+    return bounding_box
+
+
+function construct_kd_tree(points, depth):
+    // Base case: return empty node if no points or maximum depth reached
+    if points is empty or depth >= max_depth:
+        return EmptyNode
+
+    // Select optimal splitting plane using SAH
+    (dimension, split_value) = select_optimal_splitting_plane(points, dimensions)
+
+    // Partition dataset based on splitting plane
+    (left_subset, right_subset) = partition_dataset(points, dimension, split_value)
+
+    // Create current node
+    node = Node(dimension, split_value)
+
+    // Recursively construct child nodes
+    node.left = construct_kd_tree(left_subset, depth + 1)
+    node.right = construct_kd_tree(right_subset, depth + 1)
+
+    return node
+
+function calculate_sah_cost(points, dimension, split_value):
+    left_subset = points with coordinates < split_value along dimension
+    right_subset = points with coordinates >= split_value along dimension
+
+    // Calculate bounding boxes for left and right subsets
+    left_box = calculate_bounding_box(left_subset)
+    right_box = calculate_bounding_box(right_subset)
+
+    // Compute surface areas of bounding boxes
+    surface_area_left = calculate_surface_area(left_box)
+    surface_area_right = calculate_surface_area(right_box)
+
+    // Calculate SAH cost
+    sah_cost = (number of points in left_subset * surface_area_left)
+             + (number of points in right_subset * surface_area_right)
+    return sah_cost
+
+function select_optimal_splitting_plane(points, dimensions):
+    min_cost = INFINITY
+    optimal_dimension = 0
+    optimal_split_value = 0.0
+
+    // Iterate over all dimensions
+    for dim in 0 to dimensions - 1:
+        // Sort points along the current dimension
+        sorted_points = sort(points, by dimension dim)
+
+        // Iterate over potential splitting values
+        for i in 1 to length(sorted_points) - 1:
+            split_value = (sorted_points[i - 1].coordinate(dim) + sorted_points[i].coordinate(dim)) / 2.0
+            sah_cost = calculate_sah_cost(sorted_points, dim, split_value)
+
+            // Update optimal splitting plane if SAH cost is lower
+            if sah_cost < min_cost:
+                min_cost = sah_cost
+                optimal_dimension = dim
+                optimal_split_value = split_value
+
+    return (optimal_dimension, optimal_split_value)
+
+function calculate_surface_area(min_coordinates, max_coordinates):
+    // Calculate the dimensions of the bounding box
+    width = max_coordinates[0] - min_coordinates[0]
+    height = max_coordinates[1] - min_coordinates[1]
+    depth = max_coordinates[2] - min_coordinates[2]
+
+    // Calculate the surface area of the bounding box
+    surface_area = 2 * (width * height + height * depth + depth * width)
+
+    return surface_area
+
+
+
+

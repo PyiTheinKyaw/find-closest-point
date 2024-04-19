@@ -3,15 +3,15 @@ use crate::functions::dataset::Dataset;
 use crate::functions::distance_calculator::DistanceCalculator;
 use crate::functions::sortable::Sortable;
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct Point3D {
-    x: f32,
-    y: f32,
-    z: f32
+    pub x: f32,
+    pub y: f32,
+    pub z: f32
 }
 
 impl Point3D {
-    fn new(x: f32, y: f32, z: f32) -> Self {
+    pub fn new(x: f32, y: f32, z: f32) -> Self {
         Point3D {x,y,z}
     }
 }
@@ -32,6 +32,10 @@ impl Dataset<Point3D> for Point3D
             ((rand::random::<f32>() * (max - min) + min)* 100.0).round() / 100.0,
             ((rand::random::<f32>() * (max - min) + min)* 100.0).round() / 100.0,
         )
+    }
+
+    fn get_internal_state(&self) -> Vec<f32> {
+        vec![self.x, self.y, self.z]
     }
 }
 
