@@ -42,6 +42,17 @@
 // criterion_group!(benches, bench_find_closest);
 // criterion_main!(benches);
 
-fn main() {
+use fnp::model::point3d::Point3D;
+use fnp::model::sah::SAH;
 
+fn main() {
+    let points = vec![
+        Point3D::new(1.0, 2.0, 3.0),
+        Point3D::new(7.0, 8.0, 9.0),
+        Point3D::new(4.0, 52.0, 6.0),
+    ];
+
+    // Call the function to select the optimal splitting plane
+    let optimal_splitting_plane = SAH::select_optimal_splitting_plane(points.clone(), 3);
+    println!("optimal_splitting_plane cost: {:?}", optimal_splitting_plane);
 }

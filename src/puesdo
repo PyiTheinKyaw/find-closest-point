@@ -103,7 +103,7 @@ function calculate_surface_area(min_coordinates, max_coordinates):
     return surface_area
 
 
-
+--------------------------------------
 
 function select_optimal_splitting_plane(points, min_points_per_subset, min_surface_area):
     // Base case: If number of points falls below threshold, return None
@@ -120,26 +120,58 @@ function select_optimal_splitting_plane(points, min_points_per_subset, min_surfa
     median_index = length(sorted_points) / 2
     median_value = sorted_points[median_index].coordinate(largest_range_dimension)
 
-    // Partition the dataset into left and right subsets based on the median value
+    calculate_sah_cost {
+        // Partition the dataset into left and right subsets based on the median value
+        left_subset = []
+        right_subset = []
+        for point in sorted_points:
+            if point.coordinate(largest_range_dimension) < median_value:
+                append point to left_subset
+            else:
+                append point to right_subset
+
+        // Calculate bounding boxes for left and right subsets
+        left_bbox = calculate_bounding_box(left_subset)
+        right_bbox = calculate_bounding_box(right_subset)
+
+        // Calculate SAH cost for the splitting plane
+        sah_cost = calculate_sah_cost(left_subset, right_subset, left_bbox, right_bbox)
+    }
+        // Return the dimension, split value, and SAH cost for the current splitting plane
+        return (largest_range_dimension, median_value, sah_cost)
+
+
+function construct_kd_tree(points, depth, min_points_per_subset, min_surface_area):
+    // Base case: If number of points falls below threshold, return None
+    if size(points) < 2 * min_points_per_subset:
+        return None
+
+    // Determine current dimension based on depth (alternates between x, y, z)
+    dimension = depth % 3
+
+    // Select optimal splitting plane for the current subset of points
+    // Sort will be done in select_optimal_splitting_plane
+    (splitting_dimension, split_value, _) = select_optimal_splitting_plane(points, min_points_per_subset, min_surface_area)
+
+    // Partition the dataset into left and right subsets based on the selected splitting plane
     left_subset = []
     right_subset = []
-    for point in sorted_points:
-        if point.coordinate(largest_range_dimension) < median_value:
+    for point in points:
+        if point.coordinate(splitting_dimension) < split_value:
             append point to left_subset
         else:
             append point to right_subset
 
-    // Calculate bounding boxes for left and right subsets
-    left_bbox = calculate_bounding_box(left_subset)
-    right_bbox = calculate_bounding_box(right_subset)
+    // Recursively construct kd-trees for left and right subsets
+    left_child = construct_kd_tree(left_subset, depth + 1, min_points_per_subset, min_surface_area)
+    right_child = construct_kd_tree(right_subset, depth + 1, min_points_per_subset, min_surface_area)
 
-    // Calculate SAH cost for the splitting plane
-    sah_cost = calculate_sah_cost(left_subset, right_subset, left_bbox, right_bbox)
+    // Create a node for the current splitting plane
+    node = Node(dimension=splitting_dimension, split_value=split_value)
+    node.left_child = left_child
+    node.right_child = right_child
 
-    // Return the dimension, split value, and SAH cost for the current splitting plane
-    return (largest_range_dimension, median_value, sah_cost)
-
-
+    return node
 
 function find_dimension_with_largest_range(points, dimensions):
     // Initialize variables to track dimension with largest range and its associated range value
@@ -167,3 +199,24 @@ function find_dimension_with_largest_range(points, dimensions):
             largest_range_value = range_value
 
     return largest_range_dimension
+
+function create_internal_node(splitting_dimension, split_value, sah_cost):
+    // Create a new internal node
+    node = InternalNode()
+
+    // Set the splitting dimension, split value, and SAH cost
+    node.splitting_dimension = splitting_dimension
+    node.split_value = split_value
+    node.sah_cost = sah_cost
+
+    // Return the created internal node
+    return node
+
+
+
+
+    as_ref
+    iter vs intro_inter
+--------------
+
+In the context of constructing a KD-tree, an internal node typically does not store individual points from the dataset. Instead, it serves as a structural element within the tree, representing a splitting plane that divides the dataset into two subsets.
