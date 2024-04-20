@@ -105,3 +105,65 @@ function calculate_surface_area(min_coordinates, max_coordinates):
 
 
 
+function select_optimal_splitting_plane(points, min_points_per_subset, min_surface_area):
+    // Base case: If number of points falls below threshold, return None
+    if size(points) < 2 * min_points_per_subset:
+        return None
+
+    // Find dimension with the largest range
+    largest_range_dimension = find_dimension_with_largest_range(points, dimensions)
+
+    // Sort points along the dimension with the largest range
+    sorted_points = sort(points, by dimension largest_range_dimension)
+
+    // Calculate median value along the selected dimension
+    median_index = length(sorted_points) / 2
+    median_value = sorted_points[median_index].coordinate(largest_range_dimension)
+
+    // Partition the dataset into left and right subsets based on the median value
+    left_subset = []
+    right_subset = []
+    for point in sorted_points:
+        if point.coordinate(largest_range_dimension) < median_value:
+            append point to left_subset
+        else:
+            append point to right_subset
+
+    // Calculate bounding boxes for left and right subsets
+    left_bbox = calculate_bounding_box(left_subset)
+    right_bbox = calculate_bounding_box(right_subset)
+
+    // Calculate SAH cost for the splitting plane
+    sah_cost = calculate_sah_cost(left_subset, right_subset, left_bbox, right_bbox)
+
+    // Return the dimension, split value, and SAH cost for the current splitting plane
+    return (largest_range_dimension, median_value, sah_cost)
+
+
+
+function find_dimension_with_largest_range(points, dimensions):
+    // Initialize variables to track dimension with largest range and its associated range value
+    largest_range_dimension = 0
+    largest_range_value = -INFINITY
+
+    // Iterate over each dimension
+    for dim in 0 to dimensions - 1:
+        // Initialize variables to track minimum and maximum coordinate values along current dimension
+        min_coordinate = +INFINITY
+        max_coordinate = -INFINITY
+
+        // Find minimum and maximum coordinate values along current dimension
+        for point in points:
+            coordinate_value = point.coordinate(dim)
+            min_coordinate = min(min_coordinate, coordinate_value)
+            max_coordinate = max(max_coordinate, coordinate_value)
+
+        // Calculate range of coordinate values along current dimension
+        range_value = max_coordinate - min_coordinate
+
+        // Update largest range dimension if current range is larger
+        if range_value > largest_range_value:
+            largest_range_dimension = dim
+            largest_range_value = range_value
+
+    return largest_range_dimension

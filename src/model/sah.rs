@@ -16,6 +16,18 @@ impl SAH
     fn select_optimal_splitting_plane<T>(values: RefCell<Vec<T>>,  k: usize) -> (usize, usize)
     where T: Sortable<T>
     {
+        let min_cost = f32::MAX;
+        let optimal_dimension: f32 = 0.0;
+        let optimal_split_value: f32 = 0.0;
+        let mut point_list = values.borrow_mut();
+
+        // Iterate over all dimensions
+        for axis in 0..k {
+            // Sort points along the current dimension
+            let sorted_points = point_list.sort_by(|a, b| a.sort_with_axis(&b, axis));
+
+        }
+
         todo!()
     }
 
@@ -27,7 +39,7 @@ impl SAH
     ///
     /// # Arguments
     ///
-    /// * `sorted_list` - A sorted list of elements representing the dataset.
+    /// * `sorted_list` - A ref of sorted list of elements representing the dataset.
     /// * `axis` - The axis along which to split the dataset (e.g., 0 for X-axis, 1 for Y-axis).
     /// * `k` - The dimension of the elements in the dataset.
     /// * `split_value` - The value used to split the dataset along the specified axis.
@@ -76,7 +88,7 @@ impl SAH
     ) -> f32 
     where T: Dataset<T>
     {
-        // Partition dataset into two subsets baed on split_value and axis of each dimension (x,y,z, etc..)
+        // Partition dataset into two subsets based on split_value and axis of each dimension (x,y,z, etc..)
         let (left_subset, right_subset): (Vec<&T>, Vec<&T>) = Self::partition_dataset(sorted_list, split_value, axis);
         let (left_size, right_size) = (left_subset.len(), right_subset.len());
         
@@ -135,11 +147,11 @@ impl SAH
     ///
     ///
     /// @author: Pyi Thein Kyaw
-    pub fn partition_dataset<'p,T>(
-        values: &'p Vec<T>,
+    pub fn partition_dataset<T>(
+        values: &Vec<T>,
         split_value: f32,
         axis: usize
-    ) -> (Vec<&'p T>, Vec<&'p T>)
+    ) -> (Vec<&T>, Vec<&T>)
     where T: Dataset<T>
     {
 
@@ -165,7 +177,6 @@ impl SAH
         (left_subset, right_subset)
     }
 }
-
 
 #[cfg(test)]
 mod tests {
