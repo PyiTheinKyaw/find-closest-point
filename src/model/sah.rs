@@ -31,6 +31,88 @@ impl SAH
         todo!()
     }
 
+    /// Finds the dimension (axis) with the largest range of coordinate values among a collection of points.
+    ///
+    /// This function iterates over each dimension (axis) of the points and calculates the range of coordinate
+    /// values along that dimension. It then determines the dimension with the largest range and returns its index.
+    ///
+    /// # Arguments
+    ///
+    /// * `points` - A reference to a vector of points, where each point contains coordinates in multiple dimensions.
+    /// * `k` - The dimensionality of the points (i.e., the number of dimensions).
+    ///
+    /// # Type Parameters
+    ///
+    /// * `T` - The type of the points. Must implement the `Dataset<T>` trait, providing access to the internal state.
+    ///
+    /// # Returns
+    ///
+    /// The index of the dimension (axis) with the largest range of coordinate values.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// // Define a vector of points for testing
+    /// use fnp::model::point3d::Point3D;
+    /// use fnp::model::sah::SAH;
+    /// 
+    /// let points = vec![
+    ///     Point3D::new(1.0, 2.0, 3.0),
+    ///     Point3D::new(4.0, 5.0, 6.0),
+    ///     Point3D::new(7.0, 8.0, 9.0),
+    /// ];
+    ///
+    /// // Find the dimension with the largest range of coordinate values
+    /// let largest_range_axis = SAH::find_dimension_axis_with_largest_range(&points, 3);
+    /// assert_eq!(largest_range_axis, 0);
+    /// ```
+    ///
+    /// This example demonstrates how to use the function to find the dimension with the largest range of coordinate
+    /// values among a collection of points. In this case, the expected result is `2`, indicating the third dimension.
+    ///
+    /// # Note
+    ///
+    /// The function calculates the range of coordinate values along each dimension by iterating over all points and
+    /// finding the minimum and maximum coordinate values for each dimension. It then compares these ranges to determine
+    /// the dimension with the largest range. If multiple dimensions have the same largest range, the function returns
+    /// the index of the first dimension encountered during iteration.
+    /// 
+    /// @author: Pyi Thein Kyaw
+    /// 
+    pub fn find_dimension_axis_with_largest_range<T>(points: &Vec<T>, k: usize) -> usize 
+    where T: Dataset<T>
+    {
+        // Initialize variables to track dimension with largest range and its associated range value
+        let mut largest_range_axis = 0;
+        let mut largest_range_value = f32::MIN;
+
+        // Iterate over each dimension
+        for axis in 0..k {
+            // Initialize variables to track minimum and maximum coordinate values along current dimension
+            let mut min_coord = f32::MAX;
+            let mut max_coord = f32::MIN;
+
+            // Find minimum and maximum coordinate values along current dimension
+            for point in points {
+                let point_coord = point.get_internal_state()[axis];
+
+                min_coord = point_coord.min(min_coord);
+                max_coord = point_coord.max(max_coord);
+            }
+
+            // Calculate range of coordinate values along current dimension
+            let range_value = max_coord - min_coord;
+
+            // Update largest range dimension if current range is larger
+            if range_value > largest_range_value {
+                largest_range_axis = axis;
+                largest_range_value = range_value;
+            }
+        }
+        
+        largest_range_axis
+    }
+
     /// Calculates the Surface Area Heuristic (SAH) cost for splitting a dataset along a given axis.
     ///
     /// This function computes the SAH cost for splitting a dataset represented by `sorted_list` along
@@ -149,7 +231,7 @@ impl SAH
     /// @author: Pyi Thein Kyaw
     pub fn partition_dataset<T>(
         values: &Vec<T>,
-        split_value: f32,
+        median: f32,
         axis: usize
     ) -> (Vec<&T>, Vec<&T>)
     where T: Dataset<T>
@@ -165,7 +247,7 @@ impl SAH
             let value = &point_coord[axis];
 
             // Check the coordinate value along the specified dimension
-            if value < &split_value {
+            if value < &median {
                 left_subset.push(point);
             }
             // Point belongs to the right subset
@@ -241,6 +323,22 @@ mod tests {
         // Assert that the calculated SAH cost matches the expected value
         // The expected value can be calculated based on the surface areas of the bounding boxes
         assert_eq!(sah_cost, 216.0); 
+    }
+
+    #[test]
+    fn test_find_dimension_axis_with_largest_range() {
+        // Create a vector of points for testing
+        let points = vec![
+            Point3D::new(1.0, 2.0, 3.0),
+            Point3D::new(4.0, 5.0, 6.0),
+            Point3D::new(7.0, 8.0, 9.0),
+        ];
+
+        // Call the function to find the dimension with the largest range
+        let largest_range_axis = SAH::find_dimension_axis_with_largest_range(&points, 3);
+
+        // Assert that the result is as expected
+        assert_eq!(largest_range_axis, 0);
     }
 }
 
