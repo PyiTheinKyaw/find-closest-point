@@ -1,20 +1,24 @@
 use std::cell::RefCell;
+use std::cmp::Ordering;
 use std::fmt::Debug;
 use std::rc::Rc;
 use crate::functions::dataset::Dataset;
 use crate::functions::sortable::Sortable;
+use crate::functions::tree_constructor::TreeConstructor;
 use crate::model::bounding_box::BoundingBox;
 use crate::model::kd_tree::KDTree;
 use crate::model::point3d::Point3D;
 
 #[derive(Debug, PartialEq)]
-pub struct SAH {
+pub struct SAH<T> {
     optimal_dimension: usize,
     optimal_split_value: f32,
     sah_cost: f32,
+    og_list: Vec<T>
 }
 
-impl SAH
+impl<T> SAH<T>
+    where T: Sortable<T> + Dataset<T> + Debug
 {
 
     /// Selects the optimal splitting plane for partitioning a dataset of points.
@@ -40,28 +44,11 @@ impl SAH
     /// - `optimal_split_value`: The optimal split value along the selected dimension.
     /// - `sah_cost`: The SAH cost associated with the selected splitting plane.
     ///
-    /// # Example
-    ///
-    /// ```
-    /// // Define a vector of points for testing
-    /// use fnp::model::point3d::Point3D;
-    /// use fnp::model::sah::SAH;
-    /// let mut points = vec![
-    ///     Point3D::new(1.0, 2.0, 3.0),
-    ///     Point3D::new(4.0, 5.0, 6.0),
-    ///     Point3D::new(7.0, 8.0, 9.0),
-    /// ];
-    ///
-    /// // Select the optimal splitting plane for the dataset
-    /// let optimal_splitting_plane = SAH::select_optimal_splitting_plane(points, 3);
-    /// ```
-    ///
     /// This example demonstrates how to use the function to select the optimal splitting plane
     /// for partitioning a dataset of 3D points. The resulting `optimal_splitting_plane` structure
     /// contains information about the chosen splitting plane, such as the dimension with the largest
     /// range of coordinate values and the associated SAH cost.
-    pub fn select_optimal_splitting_plane<T>(mut points: Vec<T>, k: usize) -> Self
-    where T: Sortable<T> + Debug
+    fn select_optimal_splitting_plane(mut points: Vec<T>, k: usize) -> Self
     {
         let mut min_cost = f32::MAX;
         let mut optimal_split_value = 0.0;
@@ -89,7 +76,8 @@ impl SAH
         Self {
             optimal_dimension: largest_range_axis,
             optimal_split_value,
-            sah_cost: min_cost
+            sah_cost: min_cost,
+            og_list: points
         }
     }
 
@@ -111,27 +99,6 @@ impl SAH
     ///
     /// The index of the dimension (axis) with the largest range of coordinate values.
     ///
-    /// # Example
-    ///
-    /// ```
-    /// // Define a vector of points for testing
-    /// use fnp::model::point3d::Point3D;
-    /// use fnp::model::sah::SAH;
-    /// 
-    /// let points = vec![
-    ///     Point3D::new(1.0, 2.0, 3.0),
-    ///     Point3D::new(4.0, 5.0, 6.0),
-    ///     Point3D::new(7.0, 8.0, 9.0),
-    /// ];
-    ///
-    /// // Find the dimension with the largest range of coordinate values
-    /// let largest_range_axis = SAH::find_dimension_axis_with_largest_range(&points, 3);
-    /// assert_eq!(largest_range_axis, 0);
-    /// ```
-    ///
-    /// This example demonstrates how to use the function to find the dimension with the largest range of coordinate
-    /// values among a collection of points. In this case, the expected result is `2`, indicating the third dimension.
-    ///
     /// # Note
     ///
     /// The function calculates the range of coordinate values along each dimension by iterating over all points and
@@ -141,8 +108,7 @@ impl SAH
     /// 
     /// @author: Pyi Thein Kyaw
     /// 
-    pub fn find_dimension_axis_with_largest_range<T>(points: &Vec<T>, k: usize) -> usize 
-    where T: Dataset<T>
+    fn find_dimension_axis_with_largest_range(points: &Vec<T>, k: usize) -> usize
     {
         // Initialize variables to track dimension with the largest range and its associated range value
         let mut largest_range_axis = 0;
@@ -203,34 +169,14 @@ impl SAH
     /// method of the `BoundingBox` struct. Next, it computes the surface areas of the bounding boxes using
     /// the `calculate_surface_area` method. Finally, it returns twice the sum of the surface areas of the
     /// bounding boxes of the left and right subsets as the SAH cost for the split.
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use fnp::model::point3d::Point3D;
-    /// use fnp::model::sah::SAH;;
-    /// 
-    /// let sorted_list = vec![
-    ///     Point3D::new(1.0, 2.0, 3.0),
-    ///     Point3D::new(4.0, 5.0, 6.0),
-    ///     Point3D::new(7.0, 8.0, 9.0),
-    /// ];
-    ///
-    /// // Calculate the SAH cost for splitting along the X-axis at split value 4.0
-    /// let sah_cost = SAH::calculate_sah_cost(&sorted_list, 0, 3, 4.0);
-    /// ```
-    ///
-    /// This example calculates the SAH cost for splitting a dataset of 3D points along the X-axis at a split value of 4.0.
-    /// The expected SAH cost will depend on the specific dataset and splitting criteria.
     /// 
     /// @author: Pyi Thein Kyaw
-    pub fn calculate_sah_cost<T>(
+    fn calculate_sah_cost(
         sorted_list: &Vec<T>,
         axis: usize,
         k: usize,
         median_value: f32
-    ) -> f32 
-    where T: Dataset<T> + Debug
+    ) -> f32
     {
         // Partition dataset into two subsets based on split_value and axis of each dimension (x,y,z, etc..)
         let (left_subset, right_subset): (Vec<&T>, Vec<&T>) = Self::partition_dataset(sorted_list, median_value, axis);
@@ -241,8 +187,6 @@ impl SAH
 
         let surface_area_left = left_bounding_box.calculate_surface_area();
         let surface_area_right = right_bounding_box.calculate_surface_area();
-
-
 
         2.0 * ((left_size as f32 * surface_area_left) + (right_size as f32 * surface_area_right))
     }
@@ -274,31 +218,15 @@ impl SAH
     /// # Note
     ///
     /// This function iterates over each point in the dataset and compares the value of the coordinate
-    /// along the specified axis with the `split_value`. Points with coordinate values less than
-    /// `split_value` are placed in the `left_subset`, while the rest are placed in the `right_subset`.
-    ///
-    /// # Examples
-    ///
-    /// ```
-    /// use fnp::model::point3d::Point3D;
-    /// use fnp::model::sah::SAH;
-    ///
-    /// let points = vec![Point3D::new(1.0, 2.0, 3.0), Point3D::new(4.0, 5.0, 6.0)];
-    /// let (left_subset, right_subset) = SAH::partition_dataset(&points, 2.5, 0);
-    /// ```
-    ///
-    /// This example partitions a dataset of 3D points along the X-axis with a split value of `2.5`.
-    /// Points with X-coordinate less than `2.5` are placed in the left subset, while the rest are
-    /// placed in the right subset.
-    ///
+    /// along the specified axis with the `median_value`. Points with coordinate values less than
+    /// `median_value` are placed in the `left_subset`, while the rest are placed in the `right_subset`.
     ///
     /// @author: Pyi Thein Kyaw
-    pub fn partition_dataset<T>(
+    fn partition_dataset(
         values: &Vec<T>,
         median_value: f32,
         axis: usize
     ) -> (Vec<&T>, Vec<&T>)
-    where T: Dataset<T>
     {
 
         let mut left_subset: Vec<&T> = vec![];
@@ -321,6 +249,104 @@ impl SAH
         }
 
         (left_subset, right_subset)
+    }
+
+    fn init_sah() -> Self {
+        Self {
+            og_list: vec![],
+            sah_cost: 0.0,
+            optimal_split_value: 0.0,
+            optimal_dimension: 0
+        }
+    }
+}
+
+
+impl<T> TreeConstructor<T> for SAH<T>
+    where T: Dataset<T> + Sortable<T> + Debug
+{
+    /// Constructs the spatial partitioning of the dataset based on the optimal splitting plane.
+    ///
+    /// This method takes a vector of dataset points `points` and the dimensionality `k` of the dataset.
+    /// It selects the optimal splitting plane using the `select_optimal_splitting_plane` method,
+    /// then partitions the dataset into two subsets based on the selected plane.
+    ///
+    /// # Arguments
+    ///
+    /// * `points` - A vector containing dataset points of type `T`.
+    /// * `k` - The dimensionality of the dataset.
+    ///
+    /// # Returns
+    ///
+    /// A tuple containing the left and right subsets of the dataset after partitioning and index
+    /// for later purpose.
+    /// Each subset is represented as a vector of dataset points of type `T`.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use fnp::model::point3d::Point3D;
+    /// use fnp::model::sah::SAH;
+    /// use fnp::functions::tree_constructor::TreeConstructor;
+    ///
+    /// // Define your dataset points
+    /// let points = vec![
+    ///    Point3D::new(1.0, 2.0, 3.0),
+    ///    Point3D::new(4.0, 52.0, 6.0),
+    ///    Point3D::new(7.0, 8.0, 9.0),
+    /// ];
+    ///
+    /// // Call the get_constructor method
+    /// let (left_subset, right_subset, index) = SAH::get_constructor(points, 3);
+    ///
+    /// // Perform assertions on the subsets
+    /// assert_eq!(left_subset.len(), 2);
+    /// assert_eq!(right_subset.len(), 1);
+    /// ```
+    ///
+    /// @author: Pyi Thein Kyaw
+
+    fn get_constructor(points: Vec<T>, k: usize) -> (Vec<T>, Vec<T>, usize)
+    {
+        let mut sah = Self::select_optimal_splitting_plane(points, k);
+        sah.spatial_partition_dataset()
+    }
+
+    /// Partitions the dataset into two subsets based on the optimal splitting plane.
+    ///
+    /// This method consumes the `SAH` instance and partitions the original list of dataset points
+    /// (`og_list`) into two subsets based on the optimal splitting plane determined by the SAH algorithm.
+    ///
+    /// # Returns
+    ///
+    /// A tuple containing the left and right subsets of the dataset after partitioning.
+    /// Each subset is represented as a vector of dataset points of type `T`.
+    ///
+    /// A index which
+    ///
+    /// @author: Pyi Thein Kyaw
+    fn spatial_partition_dataset(self) -> (Vec<T>, Vec<T>, usize)
+    {
+        let mut left_subset: Vec<T> = vec![];
+        let mut right_subset: Vec<T> = vec![];
+
+        for point in self.og_list.into_iter() {
+
+            let point_coord = point.get_internal_state();
+
+            let value = &point_coord[self.optimal_dimension];
+
+            // Check the coordinate value along the specified dimension
+            if value < &self.optimal_split_value {
+                left_subset.push(point);
+            }
+            // Point belongs to the right subset
+            else {
+                right_subset.push(point);
+            }
+        }
+
+        (left_subset, right_subset, self.optimal_split_value)
     }
 }
 
@@ -424,9 +450,24 @@ mod tests {
             SAH {
                 optimal_dimension: 1,
                 optimal_split_value: 30.0,
-                sah_cost: 864.0
+                sah_cost: 864.0,
+                og_list: points
             }
         );
+    }
+
+    #[test]
+    fn test_tree_constructor() {
+        // Create a vector of Point3D instances for testing
+        let points = vec![
+            Point3D::new(1.0, 2.0, 3.0),
+            Point3D::new(4.0, 52.0, 6.0),
+            Point3D::new(7.0, 8.0, 9.0),
+        ];
+
+        let sub_tree = SAH::get_constructor(points, 3);
+        assert_eq!(sub_tree.0, vec![Point3D::new(1.0, 2.0, 3.0), Point3D::new(7.0, 8.0, 9.0)]);
+        assert_eq!(sub_tree.1, vec![Point3D::new(4.0, 52.0, 6.0)]);
     }
 }
 

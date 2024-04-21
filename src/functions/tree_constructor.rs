@@ -1,6 +1,6 @@
-use std::cell::RefCell;
-use crate::functions::sortable::Sortable;
+pub trait TreeConstructor<T>
+{
+    fn get_constructor(points: Vec<T>, k: usize) -> (Vec<T>, Vec<T>, usize) ;
 
-pub trait TreeConstructor<T>: Sortable<T> {
-    fn get_subset(values: RefCell<Vec<T>>) -> (Vec<T>, Vec<T>);
+    fn spatial_partition_dataset(self) -> (Vec<T>, Vec<T>);
 }

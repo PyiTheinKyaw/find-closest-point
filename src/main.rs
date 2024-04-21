@@ -42,6 +42,9 @@
 // criterion_group!(benches, bench_find_closest);
 // criterion_main!(benches);
 
+use fnp::functions::dataset::Dataset;
+use fnp::functions::sortable::Sortable;
+use fnp::functions::tree_constructor::TreeConstructor;
 use fnp::model::point3d::Point3D;
 use fnp::model::sah::SAH;
 
@@ -53,6 +56,5 @@ fn main() {
     ];
 
     // Call the function to select the optimal splitting plane
-    let optimal_splitting_plane = SAH::select_optimal_splitting_plane(points.clone(), 3);
-    println!("optimal_splitting_plane cost: {:?}", optimal_splitting_plane);
+
 }

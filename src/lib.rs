@@ -1,3 +1,3 @@
 pub mod model;
-mod functions;
+pub mod functions;
 

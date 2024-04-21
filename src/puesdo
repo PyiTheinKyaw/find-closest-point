@@ -220,3 +220,72 @@ function create_internal_node(splitting_dimension, split_value, sah_cost):
 --------------
 
 In the context of constructing a KD-tree, an internal node typically does not store individual points from the dataset. Instead, it serves as a structural element within the tree, representing a splitting plane that divides the dataset into two subsets.
+-------------------
+
+
+struct LeafNode {
+    points: List<Point>,  // List of points stored in the leaf node
+}
+
+// Function to create a leaf node
+function create_leaf_node(points: List<Point>) -> LeafNode:
+    leaf_node = LeafNode()
+    leaf_node.points = points
+    return leaf_node
+
+// Add a point to a leaf node
+function add_point_to_leaf_node(leaf_node: LeafNode, point: Point):
+    append point to leaf_node.points
+
+// Create an internal node
+function create_internal_node(splitting_dimension: int, split_value: float, left_child: Node, right_child: Node):
+    internal_node = InternalNode()
+    internal_node.splitting_dimension = splitting_dimension
+    internal_node.split_value = split_value
+    internal_node.left_child = left_child
+    internal_node.right_child = right_child
+    return internal_node
+
+function build_kd_tree(points, dimensions, min_points_per_subset, min_surface_area):
+    if size(points) <= min_points_per_subset:
+        return create_leaf_node(points)
+
+    // Find dimension with the largest range
+    splitting_dimension = find_dimension_with_largest_range(points, dimensions)
+
+    // Calculate SAH cost for each potential split value
+    min_sah_cost = INFINITY
+    optimal_split_value = None
+    optimal_left_subset = None
+    optimal_right_subset = None
+
+    // Sort points along the splitting dimension
+    sorted_points = sort(points, by dimension splitting_dimension)
+
+    // Iterate over potential split values
+    for i in range(1, length(sorted_points)):
+        // Calculate SAH cost for splitting at current value
+        left_subset = sorted_points[:i]
+        right_subset = sorted_points[i:]
+        left_bbox = calculate_bounding_box(left_subset)
+        right_bbox = calculate_bounding_box(right_subset)
+        sah_cost = calculate_sah_cost(left_subset, right_subset, left_bbox, right_bbox)
+
+        // Update optimal splitting plane if SAH cost is lower
+        if sah_cost < min_sah_cost:
+            min_sah_cost = sah_cost
+            optimal_split_value = (sorted_points[i - 1][splitting_dimension] + sorted_points[i][splitting_dimension]) / 2.0
+            optimal_left_subset = left_subset
+            optimal_right_subset = right_subset
+
+    // Check if splitting is beneficial based on minimum surface area
+    if calculate_surface_area(left_bbox) + calculate_surface_area(right_bbox) > min_surface_area:
+        // Recursively build left and right child nodes
+        left_child = build_kd_tree(optimal_left_subset, dimensions, min_points_per_subset, min_surface_area)
+        right_child = build_kd_tree(optimal_right_subset, dimensions, min_points_per_subset, min_surface_area)
+
+        // Create internal node with optimal splitting plane
+        return create_internal_node(splitting_dimension, optimal_split_value, left_child, right_child)
+    else:
+        // Create a leaf node if splitting is not beneficial
+        return create_leaf_node(points)
