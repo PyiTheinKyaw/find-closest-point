@@ -281,6 +281,7 @@ impl<T> TreeConstructor<T> for SAH<T>
     /// A tuple containing the left and right subsets of the dataset after partitioning and index
     /// for later purpose.
     /// Each subset is represented as a vector of dataset points of type `T`.
+    /// And index value that will be used in searching purpose.
     ///
     /// # Examples
     ///
@@ -300,16 +301,24 @@ impl<T> TreeConstructor<T> for SAH<T>
     /// let (left_subset, right_subset, index) = SAH::get_constructor(points, 3);
     ///
     /// // Perform assertions on the subsets
-    /// assert_eq!(left_subset.len(), 2);
-    /// assert_eq!(right_subset.len(), 1);
+    /// assert_eq!(left_subset.unwrap().len(), 2);
+    /// assert_eq!(right_subset.unwrap().len(), 1);
     /// ```
     ///
     /// @author: Pyi Thein Kyaw
 
-    fn get_constructor(points: Vec<T>, k: usize) -> (Vec<T>, Vec<T>, usize)
+    fn get_constructor(points: Vec<T>, k: usize) -> (Option<Vec<T>>, Option<Vec<T>>, usize)
     {
-        let mut sah = Self::select_optimal_splitting_plane(points, k);
-        sah.spatial_partition_dataset()
+        let sah = Self::select_optimal_splitting_plane(points, k);
+        let partitioned_data = sah.spatial_partition_dataset();
+        
+        let mut result: (Option<Vec<T>>, Option<Vec<T>>, usize) = (None, None, 0);
+
+        result.0 = if partitioned_data.0.len() > 0 {Some(partitioned_data.0)} else {None};
+        result.1 = if partitioned_data.1.len() > 0 {Some(partitioned_data.1)} else {None};
+        result.2 = partitioned_data.2;
+
+        result
     }
 
     /// Partitions the dataset into two subsets based on the optimal splitting plane.
@@ -321,6 +330,7 @@ impl<T> TreeConstructor<T> for SAH<T>
     ///
     /// A tuple containing the left and right subsets of the dataset after partitioning.
     /// Each subset is represented as a vector of dataset points of type `T`.
+    /// And index value that will be used in searching purpose.
     ///
     /// A index which
     ///
@@ -346,7 +356,7 @@ impl<T> TreeConstructor<T> for SAH<T>
             }
         }
 
-        (left_subset, right_subset, self.optimal_split_value)
+        (left_subset, right_subset, self.optimal_split_value as usize)
     }
 }
 
@@ -466,8 +476,8 @@ mod tests {
         ];
 
         let sub_tree = SAH::get_constructor(points, 3);
-        assert_eq!(sub_tree.0, vec![Point3D::new(1.0, 2.0, 3.0), Point3D::new(7.0, 8.0, 9.0)]);
-        assert_eq!(sub_tree.1, vec![Point3D::new(4.0, 52.0, 6.0)]);
+        assert_eq!(sub_tree.0.unwrap(), vec![Point3D::new(1.0, 2.0, 3.0), Point3D::new(7.0, 8.0, 9.0)]);
+        assert_eq!(sub_tree.1.unwrap(), vec![Point3D::new(4.0, 52.0, 6.0)]);
     }
 }
 
