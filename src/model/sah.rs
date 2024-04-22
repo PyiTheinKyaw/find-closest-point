@@ -181,12 +181,12 @@ impl<T> SAH<T>
         // Partition dataset into two subsets based on split_value and axis of each dimension (x,y,z, etc..)
         let (left_subset, right_subset): (Vec<&T>, Vec<&T>) = Self::partition_dataset(sorted_list, median_value, axis);
         let (left_size, right_size) = (left_subset.len(), right_subset.len());
-        
-        let left_bounding_box = BoundingBox::calculate_bounding_box(left_subset, k); //Loop Points
+
+        let left_bounding_box = BoundingBox::calculate_bounding_box(left_subset, k);
         let right_bounding_box = BoundingBox::calculate_bounding_box(right_subset, k);
 
-        let surface_area_left = left_bounding_box.calculate_surface_area();
-        let surface_area_right = right_bounding_box.calculate_surface_area();
+        let surface_area_left = if left_size != 0 {left_bounding_box.calculate_surface_area()} else {0.0};
+        let surface_area_right = if right_size != 0 {right_bounding_box.calculate_surface_area()} else {0.0};
 
         2.0 * ((left_size as f32 * surface_area_left) + (right_size as f32 * surface_area_right))
     }
@@ -250,15 +250,6 @@ impl<T> SAH<T>
 
         (left_subset, right_subset)
     }
-
-    fn init_sah() -> Self {
-        Self {
-            og_list: vec![],
-            sah_cost: 0.0,
-            optimal_split_value: 0.0,
-            optimal_dimension: 0
-        }
-    }
 }
 
 
@@ -298,7 +289,7 @@ impl<T> TreeConstructor<T> for SAH<T>
     /// ];
     ///
     /// // Call the get_constructor method
-    /// let (left_subset, right_subset, index) = SAH::get_constructor(points, 3);
+    /// let (left_subset, right_subset, index, _) = SAH::get_constructor(points, 3);
     ///
     /// // Perform assertions on the subsets
     /// assert_eq!(left_subset.unwrap().len(), 2);
@@ -307,16 +298,19 @@ impl<T> TreeConstructor<T> for SAH<T>
     ///
     /// @author: Pyi Thein Kyaw
 
-    fn get_constructor(points: Vec<T>, k: usize) -> (Option<Vec<T>>, Option<Vec<T>>, usize)
+    fn get_constructor(points: Vec<T>, k: usize) -> (Option<Vec<T>>, Option<Vec<T>>, f32, f32)
     {
         let sah = Self::select_optimal_splitting_plane(points, k);
+        let cost = sah.sah_cost;
+
         let partitioned_data = sah.spatial_partition_dataset();
         
-        let mut result: (Option<Vec<T>>, Option<Vec<T>>, usize) = (None, None, 0);
+        let mut result: (Option<Vec<T>>, Option<Vec<T>>, f32, f32) = (None, None, 0.0, 0.0);
 
         result.0 = if partitioned_data.0.len() > 0 {Some(partitioned_data.0)} else {None};
         result.1 = if partitioned_data.1.len() > 0 {Some(partitioned_data.1)} else {None};
         result.2 = partitioned_data.2;
+        result.3 = cost;
 
         result
     }
@@ -335,7 +329,7 @@ impl<T> TreeConstructor<T> for SAH<T>
     /// A index which
     ///
     /// @author: Pyi Thein Kyaw
-    fn spatial_partition_dataset(self) -> (Vec<T>, Vec<T>, usize)
+    fn spatial_partition_dataset(self) -> (Vec<T>, Vec<T>, f32)
     {
         let mut left_subset: Vec<T> = vec![];
         let mut right_subset: Vec<T> = vec![];
@@ -356,7 +350,7 @@ impl<T> TreeConstructor<T> for SAH<T>
             }
         }
 
-        (left_subset, right_subset, self.optimal_split_value as usize)
+        (left_subset, right_subset, self.optimal_split_value)
     }
 }
 

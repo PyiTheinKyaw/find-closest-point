@@ -2,11 +2,11 @@ use std::fmt::Debug;
 use crate::model::direction::NodeDirection;
 #[derive(Debug)]
 pub struct Node<T> {
-    index: usize,
-    values: Option<Vec<T>>,
-    is_leaf: bool,
-    left: Option<Box<Node<T>>>,
-    right: Option<Box<Node<T>>>,
+    pub index: f32,
+    pub values: Option<Vec<T>>,
+    pub is_leaf: bool,
+    pub left: Option<Box<Node<T>>>,
+    pub right: Option<Box<Node<T>>>,
 }
 
 impl<T> Node<T>
@@ -39,7 +39,7 @@ impl<T> Node<T>
     /// Empty nodes serve as placeholders in tree structures, providing a starting point for building the tree.
     pub fn get_empty_node() -> Node<T> {
         Node {
-            index: 0,
+            index: 0.0,
             values: None,
             is_leaf: false,
             left: None,
@@ -69,7 +69,7 @@ impl<T> Node<T>
     /// let child_node = Node::<i32>::get_empty_node();
     /// 
     /// // Set the child node as the left child of the parent node
-    /// parent_node.set_child_node(child_node, 1, NodeDirection::LEFT);
+    /// parent_node.set_child_node(Some(child_node), 1.0, NodeDirection::LEFT);
     /// ```
     /// 
     /// # Notes
@@ -80,12 +80,12 @@ impl<T> Node<T>
     /// - The provided `node` is wrapped in a `Box` before setting it as the child node to manage memory ownership.
     /// 
     /// This method is useful for constructing tree structures and organizing nodes based on their relationships.
-    pub fn set_child_node(&mut self, node: Self, index: usize, direction: NodeDirection) {
-        if direction == NodeDirection::LEFT {
-            self.left = Some(Box::new(node));
+    pub fn set_child_node(&mut self, node: Option<Self>, index: f32, direction: NodeDirection) {
+        if direction == NodeDirection::LEFT && node.is_some() {
+            self.left = Some(Box::new(node.unwrap()));
         }
-        else if direction == NodeDirection::RIGHT {
-            self.right = Some(Box::new(node));
+        else if direction == NodeDirection::RIGHT && node.is_some() {
+            self.right = Some(Box::new(node.unwrap()));
         }
 
         self.index = index;
@@ -121,7 +121,7 @@ impl<T> Node<T>
     /// Leaf nodes are typically used in tree structures to represent endpoints or data storage points.
     pub fn create_leaf_node(values: Vec<T>) -> Self{
         Self {
-            index: 0,
+            index: 0.0,
             values: Some(values),
             is_leaf: true,
             left: None,
